@@ -33,10 +33,10 @@ class BaseOptions():
         parser.add_argument('--batch_size', type=int, default=64)
         parser.add_argument('--epochs', type=int, default=38)
         parser.add_argument('--resume', type=str, default='')
-        parser.add_argument('--joint_2d_loss_weight', type=float, default=1.0)
+        parser.add_argument('--joint_2d_loss_weight', type=float, default=0.1)
         parser.add_argument('--vertices_loss_weight', type=float, default=1.0)
         parser.add_argument('--joint_3d_loss_weight', type=float, default=1.0)
-
+        parser.add_argument('--edge_loss_weight', type=float, default=10.0)
         # others
         parser.add_argument('--seed', type=int, default=88)
         parser.add_argument("--multiscale_inference", default=False, action='store_true',) 

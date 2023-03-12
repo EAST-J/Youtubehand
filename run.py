@@ -7,12 +7,13 @@ import torch
 import numpy as np
 import cv2
 from utils.metric_logger import AverageMeter
+from utils.read import save_mesh
 from utils.geometric_layers import orthographic_projection
 from utils.comm import is_main_process
 from utils.miscellaneous import mkdir
 from utils.renderer import Renderer
 from utils.vis import visual_mesh, visual_skeleton
-from model.loss import keypoint_2d_loss, keypoint_3d_loss, vertices_loss
+from model.loss import keypoint_2d_loss, keypoint_3d_loss, vertices_loss, edge_length_loss
 import datetime
 from tqdm import tqdm
 from PIL import Image
@@ -91,16 +92,24 @@ class Runner(object):
             pred_vertices = out['pred_vertices']
             # use mano and predicted camera parameters to get 3d joint and 2d joint
             pred_3d_joints_from_mesh = self.mano.get_3d_joints(pred_vertices)
+            pred_3d_root = pred_3d_joints_from_mesh[:,self.mano.joints_name.index('Wrist'),:]
+            pred_vertices = pred_vertices - pred_3d_root[:, None, :]
+            pred_3d_joints_from_mesh = pred_3d_joints_from_mesh - pred_3d_root[:, None, :]
             pred_2d_joints_from_mesh = orthographic_projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
             loss_3d_joints = keypoint_3d_loss(criterion_keypoints, pred_3d_joints_from_mesh, gt_3d_joints_with_tag, has_3d_joints)
             loss_vertices = vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_mesh)
             loss_2d_joints = keypoint_2d_loss(criterion_2d_keypoints, pred_2d_joints_from_mesh, gt_2d_joints, has_2d_joints)
-            loss = args.joint_2d_loss_weight*loss_2d_joints + args.vertices_loss_weight*loss_vertices + args.joint_3d_loss_weight*loss_3d_joints
+            loss_edge = edge_length_loss(pred_vertices, gt_vertices, self.mano.face)
+            loss = args.joint_2d_loss_weight*loss_2d_joints + \
+                   args.vertices_loss_weight*loss_vertices + \
+                   args.joint_3d_loss_weight*loss_3d_joints + \
+                   args.edge_loss_weight * loss_edge
             # add to tensorboard
             board.add_scalar('loss', loss.item(), iteration)
             board.add_scalar('loss_2d_joints', loss_2d_joints.item(), iteration)
             board.add_scalar('loss_3d_joints', loss_3d_joints.item(), iteration)
             board.add_scalar('loss_vertices', loss_vertices.item(), iteration)
+            board.add_scalar('loss_edge', loss_edge.item(), iteration)
             # update logs
             log_loss_2djoints.update(loss_2d_joints.item(), batch_size)
             log_loss_3djoints.update(loss_3d_joints.item(), batch_size)
@@ -198,6 +207,7 @@ class Runner(object):
             result_img = np.hstack([img_visual, skl_img, rend_img])[:,:,::-1] * 255
             img_save_path = op.join(self.args.output_dir, 'demo', op.basename(img_file))
             cv2.imwrite(img_save_path, result_img)
+            save_mesh(img_save_path[:-4]+'.ply', pred_vertices[0].detach().cpu().numpy(), self.mano.face)
             print('save to ' + img_save_path)
 
 
