@@ -60,3 +60,29 @@ def edge_length_loss(pred, gt, face, is_valid=None):
     if is_valid is not None:
         loss *= is_valid
     return loss.mean()
+
+def normal_loss(pred, gt, face, is_valid=None):
+
+    v1_out = pred[:, face[:, 1], :] - pred[:, face[:, 0], :]
+    v1_out = F.normalize(v1_out, p=2, dim=2)  # L2 normalize to make unit vector
+    v2_out = pred[:, face[:, 2], :] - pred[:, face[:, 0], :]
+    v2_out = F.normalize(v2_out, p=2, dim=2)  # L2 normalize to make unit vector
+    v3_out = pred[:, face[:, 2], :] - pred[:, face[:, 1], :]
+    v3_out = F.normalize(v3_out, p=2, dim=2)  # L2 nroamlize to make unit vector
+
+    v1_gt = gt[:, face[:, 1], :] - gt[:, face[:, 0], :]
+    v1_gt = F.normalize(v1_gt, p=2, dim=2)  # L2 normalize to make unit vector
+    v2_gt = gt[:, face[:, 2], :] - gt[:, face[:, 0], :]
+    v2_gt = F.normalize(v2_gt, p=2, dim=2)  # L2 normalize to make unit vector
+    normal_gt = torch.cross(v1_gt, v2_gt, dim=2)
+    normal_gt = F.normalize(normal_gt, p=2, dim=2)  # L2 normalize to make unit vector
+
+    # valid_mask = valid[:, face[:, 0], :] * valid[:, face[:, 1], :] * valid[:, face[:, 2], :]
+
+    cos1 = torch.abs(torch.sum(v1_out * normal_gt, 2, keepdim=True)) #* valid_mask
+    cos2 = torch.abs(torch.sum(v2_out * normal_gt, 2, keepdim=True)) #* valid_mask
+    cos3 = torch.abs(torch.sum(v3_out * normal_gt, 2, keepdim=True)) #* valid_mask
+    loss = torch.cat((cos1, cos2, cos3), 1)
+    if is_valid is not None:
+        loss *= is_valid
+    return loss.mean()

@@ -13,7 +13,7 @@ from utils.comm import is_main_process
 from utils.miscellaneous import mkdir
 from utils.renderer import Renderer
 from utils.vis import visual_mesh, visual_skeleton
-from model.loss import keypoint_2d_loss, keypoint_3d_loss, vertices_loss, edge_length_loss
+from model.loss import keypoint_2d_loss, keypoint_3d_loss, vertices_loss, edge_length_loss, normal_loss
 import datetime
 from tqdm import tqdm
 from PIL import Image
@@ -100,16 +100,19 @@ class Runner(object):
             loss_vertices = vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_mesh)
             loss_2d_joints = keypoint_2d_loss(criterion_2d_keypoints, pred_2d_joints_from_mesh, gt_2d_joints, has_2d_joints)
             loss_edge = edge_length_loss(pred_vertices, gt_vertices, self.mano.face)
+            loss_normal = normal_loss(pred_vertices, gt_vertices, self.mano.face)
             loss = args.joint_2d_loss_weight*loss_2d_joints + \
                    args.vertices_loss_weight*loss_vertices + \
                    args.joint_3d_loss_weight*loss_3d_joints + \
-                   args.edge_loss_weight * loss_edge
+                   args.edge_loss_weight * loss_edge + \
+                   args.normal_loss_weight * loss_normal
             # add to tensorboard
             board.add_scalar('loss', loss.item(), iteration)
             board.add_scalar('loss_2d_joints', loss_2d_joints.item(), iteration)
             board.add_scalar('loss_3d_joints', loss_3d_joints.item(), iteration)
             board.add_scalar('loss_vertices', loss_vertices.item(), iteration)
             board.add_scalar('loss_edge', loss_edge.item(), iteration)
+            board.add_scalar('loss_normal', loss_normal.item(), iteration)
             # update logs
             log_loss_2djoints.update(loss_2d_joints.item(), batch_size)
             log_loss_3djoints.update(loss_3d_joints.item(), batch_size)
