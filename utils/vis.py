@@ -10,7 +10,7 @@ def visual_mesh(renderer, images, pred_vertices, pred_camera):
     '''
     vertices = pred_vertices.detach().cpu().numpy()
     pred_camera = pred_camera.detach().cpu().numpy()
-    rend_img = visualize_reconstruction_no_text(images, images.shape[0], vertices, pred_camera, renderer, color='hand')
+    rend_img = visualize_reconstruction_no_text(images, images.shape[0], vertices, pred_camera, renderer, color='pink')
     return rend_img
 
 def visual_skeleton(images, pred_2d_joints):

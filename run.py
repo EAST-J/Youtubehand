@@ -206,8 +206,9 @@ class Runner(object):
             pred_2d_joints_from_mesh = orthographic_projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
             # visualize result
             skl_img = visual_skeleton(img_visual, pred_2d_joints_from_mesh[0])
-            rend_img = visual_mesh(self.renderer, img_visual, pred_vertices[0], pred_camera[0])
-            result_img = np.hstack([img_visual, skl_img, rend_img])[:,:,::-1] * 255
+            # rend_img = visual_mesh(self.renderer, img_visual, pred_vertices[0], pred_camera[0])
+            # result_img = np.hstack([img_visual, skl_img, rend_img])[:,:,::-1] * 255
+            result_img = np.hstack([img_visual, skl_img, ])[:,:,::-1] * 255
             img_save_path = op.join(self.args.output_dir, 'demo', op.basename(img_file))
             cv2.imwrite(img_save_path, result_img)
             save_mesh(img_save_path[:-4]+'.ply', pred_vertices[0].detach().cpu().numpy(), self.mano.face)

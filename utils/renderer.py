@@ -322,12 +322,11 @@ def visualize_reconstruction_no_text(img, img_size, vertices, camera, renderer, 
     """
     # Fix a flength so i can render this with persp correct scale
     res = img.shape[1]
-    camera_t = np.array([camera[1], camera[2], 2*focal_length/(res * camera[0] +1e-9)])
+    camera_t = np.array([camera[1], camera[2], 2 * focal_length/(res * camera[0] +1e-9)])
     rend_img = renderer.render(vertices, camera_t=camera_t,
                                img=img, use_bg=True,
                                focal_length=focal_length,
                                body_color=color)
-
 
     return rend_img
 

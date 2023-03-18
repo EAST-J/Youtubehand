@@ -46,9 +46,21 @@ ${REP_DIR}
 
 
 
-### Trained Model Download(TO DO)
+### Trained Model Download
 
 ---
+
+- Download the trained model from [GoogleDrive](https://drive.google.com/file/d/1dZ3Xtwix6bO4A-0JrnNH3At_4ylzFyJO/view?usp=sharing)
+
+- Here I report the re-produced results on FreiHAND
+
+| Methods    | Backbone | PA-MPJPE | PA-MPVPE |
+| ---------- | -------- | -------- | -------- |
+| Origin     | ResNet50 | 8.4      | 8.6      |
+| Reproduced | ResNet18 | 9.0      | 9.1      |
+| Reproduced | ResNet50 | -        | -        |
+
+
 
 ### Demo
 
