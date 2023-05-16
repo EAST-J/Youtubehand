@@ -58,7 +58,7 @@ ${REP_DIR}
 | ---------- | -------- | -------- | -------- |
 | Origin     | ResNet50 | 8.4      | 8.6      |
 | Reproduced | ResNet18 | 9.0      | 9.1      |
-| Reproduced | ResNet50 | -        | -        |
+| Reproduced | ResNet50 | 7.9      | 8.2      |
 
 
 
