@@ -50,7 +50,7 @@ ${REP_DIR}
 
 ---
 
-- Download the trained model from [GoogleDrive](https://drive.google.com/file/d/1dZ3Xtwix6bO4A-0JrnNH3At_4ylzFyJO/view?usp=sharing)
+- Download the trained model from [GoogleDrive](https://drive.google.com/drive/folders/1vw1Rfjdfc4UxWjRR3eFbx2lMjdseN8mh?usp=sharing)
 
 - Here I report the re-produced results on FreiHAND
 
