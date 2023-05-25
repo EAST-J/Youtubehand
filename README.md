@@ -81,7 +81,10 @@ python main.py --split demo --resume $path to trained model$
 - Run
 
 ```
+# resnet18
 python main.py --split train --batch_size 64 --epochs 38 --decay_step 30 --backbone resnet18 --out_channels 64 128 256 512
+# resnet50
+python main.py --split train --batch_size 64 --epochs 38 --decay_step 30 --backbone resnet50 --out_channels 256 512 1024 2048
 ```
 
 ### Evaluation
