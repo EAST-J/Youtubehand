@@ -50,15 +50,15 @@ ${REP_DIR}
 
 ---
 
-- Download the trained model from [GoogleDrive](https://drive.google.com/drive/folders/1vw1Rfjdfc4UxWjRR3eFbx2lMjdseN8mh?usp=sharing)
+- Download the trained model from [GoogleDrive](https://drive.google.com/drive/folders/1vw1Rfjdfc4UxWjRR3eFbx2lMjdseN8mh?usp=sharing) (TO be updated)
 
 - Here I report the re-produced results on FreiHAND
 
 | Methods    | Backbone | PA-MPJPE | PA-MPVPE |
 | ---------- | -------- | -------- | -------- |
 | Origin     | ResNet50 | 8.4      | 8.6      |
-| Reproduced | ResNet18 | 9.0      | 9.1      |
-| Reproduced | ResNet50 | 7.9      | 8.2      |
+| Reproduced | ResNet18 | 8.6      | 8.8      |
+| Reproduced | ResNet50 | 7.7      | 7.9      |
 
 
 
@@ -104,6 +104,5 @@ python main.py --split eval --resume $path to trained model$
 The implementation modifies codes or draws inspiration from:
 
 - [HandMesh](https://github.com/SeanChenxy/HandMesh)
-
 - [METRO](https://github.com/microsoft/MeshTransformer)
 - [manopth](https://github.com/hassony2/manopth)

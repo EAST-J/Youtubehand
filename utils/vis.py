@@ -8,9 +8,13 @@ def visual_mesh(renderer, images, pred_vertices, pred_camera):
     pred_vertices: v * 3
     pred_camera: 3
     '''
-    vertices = pred_vertices.detach().cpu().numpy()
-    pred_camera = pred_camera.detach().cpu().numpy()
-    rend_img = visualize_reconstruction_no_text(images, images.shape[0], vertices, pred_camera, renderer, color='pink')
+    img = images.cpu().numpy().transpose(1,2,0)
+    # Get predict vertices for the particular example
+    vertices = pred_vertices.cpu().numpy()
+    cam = pred_camera.cpu().numpy()
+    # Visualize reconstruction only
+    rend_img = visualize_reconstruction_no_text(img, 224, vertices, cam, renderer, color='hand')
+    rend_img = rend_img.transpose(2,0,1)
     return rend_img
 
 def visual_skeleton(images, pred_2d_joints):

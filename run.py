@@ -141,6 +141,7 @@ class Runner(object):
 
 
             if iteration % iters_per_epoch == 0:
+                scheduler.step()
                 # checkpoint_dir = save_checkpoint(self.model, args, epoch, iteration, logger)
                 if epoch%10==0:
                     checkpoint_dir = save_checkpoint(self.model, args, epoch, iteration, logger)

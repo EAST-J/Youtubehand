@@ -31,7 +31,6 @@ def main():
     transform_fp = osp.join(args.work_dir, 'template', 'transform.pkl')
     spiral_indices_list, down_transform_list, up_transform_list, pkl_file = spiral_tramsform(transform_fp, template_fp, args.ds_factors, args.seq_length, args.dilation)
     mano_model = MANO(args.mano_dir).to(args.device)
-
     model = Network(args.in_channels, args.out_channels, spiral_indices_list, up_transform_list, down_transform_list, args.backbone)
     # resume from checkpoint
     if args.resume:

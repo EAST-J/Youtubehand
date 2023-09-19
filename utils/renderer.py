@@ -312,7 +312,155 @@ def visualize_reconstruction_test(img, img_size, gt_kp, vertices, pred_kp, camer
 
 
 
+def visualize_reconstruction_and_att(img, img_size, vertices_full, vertices, vertices_2d, camera, renderer, ref_points, attention, focal_length=1000):
+    """Overlays gt_kp and pred_kp on img.
+    Draws vert with text.
+    Renderer is an instance of SMPLRenderer.
+    """
+    # Fix a flength so i can render this with persp correct scale
+    res = img.shape[1]
+    camera_t = np.array([camera[1], camera[2], 2*focal_length/(res * camera[0] +1e-9)])
+    rend_img = renderer.render(vertices_full, camera_t=camera_t,
+                               img=img, use_bg=True, 
+                               focal_length=focal_length, body_color='light_blue')
 
+
+    heads_num, vertex_num, _ = attention.shape
+
+    all_head = np.zeros((vertex_num,vertex_num))
+
+    ###### find max
+    # for i in range(vertex_num):
+    #     for j in range(vertex_num):
+    #         all_head[i,j] = np.max(attention[:,i,j])
+
+    ##### find avg
+    for h in range(4):
+        att_per_img = attention[h]
+        all_head = all_head + att_per_img   
+    all_head = all_head/4
+
+    col_sums = all_head.sum(axis=0)
+    all_head = all_head / col_sums[np.newaxis, :]
+
+
+    # code.interact(local=locals())
+
+    combined = []
+    if vertex_num>400:  # body
+        selected_joints = [6,7,4,5,13] # [6,7,4,5,13,12] 
+    else: # hand  
+        selected_joints = [0, 4, 8, 12, 16, 20]
+    # Draw attention
+    for ii in range(len(selected_joints)):
+        reference_id = selected_joints[ii]
+        ref_point = ref_points[reference_id]
+        attention_to_show = all_head[reference_id][14::] 
+        min_v = np.min(attention_to_show)
+        max_v = np.max(attention_to_show)
+        norm_attention_to_show = (attention_to_show - min_v)/(max_v-min_v)
+
+        vertices_norm = ((vertices_2d + 1) * 0.5) * img_size
+        ref_norm = ((ref_point + 1) * 0.5) * img_size
+        image = np.zeros_like(rend_img)
+
+        for jj in range(vertices_norm.shape[0]):
+            x = int(vertices_norm[jj,0])
+            y = int(vertices_norm[jj,1])
+            cv2.circle(image,(x,y), 1, (255,255,255), -1) 
+
+        total_to_draw = []
+        for jj in range(vertices_norm.shape[0]):
+            thres = 0.0
+            if norm_attention_to_show[jj]>thres:
+                things = [norm_attention_to_show[jj], ref_norm, vertices_norm[jj]]
+                total_to_draw.append(things)
+                # plot_one_line(ref_norm, vertices_norm[jj], image, reference_id, alpha=0.4*(norm_attention_to_show[jj]-thres)/(1-thres)  )
+        total_to_draw.sort()
+        max_att_score = total_to_draw[-1][0]
+        for item in total_to_draw:
+            attention_score = item[0]
+            ref_point = item[1]
+            vertex = item[2]
+            plot_one_line(ref_point, vertex, image, ii, alpha=(attention_score-thres)/(max_att_score-thres)  )
+        # code.interact(local=locals())
+        if len(combined)==0:
+            combined = image
+        else:
+            combined = np.hstack([combined, image])
+
+    final = np.hstack([img, combined, rend_img])
+
+    return final
+
+
+def visualize_reconstruction_and_att_local(img, img_size, vertices_full, vertices, vertices_2d, camera, renderer, ref_points, attention, color='light_blue', focal_length=1000):
+    """Overlays gt_kp and pred_kp on img.
+    Draws vert with text.
+    Renderer is an instance of SMPLRenderer.
+    """
+    # Fix a flength so i can render this with persp correct scale
+    res = img.shape[1]
+    camera_t = np.array([camera[1], camera[2], 2*focal_length/(res * camera[0] +1e-9)])
+    rend_img = renderer.render(vertices_full, camera_t=camera_t,
+                               img=img, use_bg=True, 
+                               focal_length=focal_length, body_color=color)
+    heads_num, vertex_num, _ = attention.shape
+    all_head = np.zeros((vertex_num,vertex_num))
+
+    ##### compute avg attention for 4 attention heads
+    for h in range(4):
+        att_per_img = attention[h]
+        all_head = all_head + att_per_img   
+    all_head = all_head/4
+
+    col_sums = all_head.sum(axis=0)
+    all_head = all_head / col_sums[np.newaxis, :]
+
+    combined = []
+    if vertex_num>400:  # body
+        selected_joints = [7]  # [6,7,4,5,13,12] 
+    else: # hand  
+        selected_joints = [0] # [0, 4, 8, 12, 16, 20] 
+    # Draw attention
+    for ii in range(len(selected_joints)):
+        reference_id = selected_joints[ii]
+        ref_point = ref_points[reference_id]
+        attention_to_show = all_head[reference_id][14::] 
+        min_v = np.min(attention_to_show)
+        max_v = np.max(attention_to_show)
+        norm_attention_to_show = (attention_to_show - min_v)/(max_v-min_v)
+        vertices_norm = ((vertices_2d + 1) * 0.5) * img_size
+        ref_norm = ((ref_point + 1) * 0.5) * img_size
+        image = rend_img*0.4
+
+        total_to_draw = []
+        for jj in range(vertices_norm.shape[0]):
+            thres = 0.0
+            if norm_attention_to_show[jj]>thres:
+                things = [norm_attention_to_show[jj], ref_norm, vertices_norm[jj]]
+                total_to_draw.append(things)
+        total_to_draw.sort()
+        max_att_score = total_to_draw[-1][0]
+        for item in total_to_draw:
+            attention_score = item[0]
+            ref_point = item[1]
+            vertex = item[2]
+            plot_one_line(ref_point, vertex, image, ii, alpha=(attention_score-thres)/(max_att_score-thres)  )
+
+        for jj in range(vertices_norm.shape[0]):
+            x = int(vertices_norm[jj,0])
+            y = int(vertices_norm[jj,1])
+            cv2.circle(image,(x,y), 1, (255,255,255), -1) 
+
+        if len(combined)==0:
+            combined = image
+        else:
+            combined = np.hstack([combined, image])
+
+    final = np.hstack([img, combined, rend_img])
+
+    return final
 
 
 def visualize_reconstruction_no_text(img, img_size, vertices, camera, renderer, color='pink', focal_length=1000):
@@ -322,13 +470,16 @@ def visualize_reconstruction_no_text(img, img_size, vertices, camera, renderer, 
     """
     # Fix a flength so i can render this with persp correct scale
     res = img.shape[1]
-    camera_t = np.array([camera[1], camera[2], 2 * focal_length/(res * camera[0] +1e-9)])
+    camera_t = np.array([camera[1], camera[2], 2*focal_length/(res * camera[0] +1e-9)])
     rend_img = renderer.render(vertices, camera_t=camera_t,
                                img=img, use_bg=True,
                                focal_length=focal_length,
                                body_color=color)
 
-    return rend_img
+
+    combined = np.hstack([img, rend_img])
+
+    return combined
 
 
 def plot_one_line(ref, vertex, img, color_index, alpha=0.0, line_thickness=None):
