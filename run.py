@@ -1,4 +1,5 @@
 import os
+os.environ["PYOPENGL_PLATFORM"] = "osmesa"
 import os.path as op
 import pickle
 import json
@@ -8,11 +9,10 @@ import numpy as np
 import cv2
 from utils.metric_logger import AverageMeter
 from utils.read import save_mesh
-from utils.geometric_layers import orthographic_projection
+from utils.geometric_layers import projection 
 from utils.comm import is_main_process
 from utils.miscellaneous import mkdir
-from utils.renderer import Renderer
-from utils.vis import visual_mesh, visual_skeleton
+from utils.vis import Visualizer
 from model.loss import keypoint_2d_loss, keypoint_3d_loss, vertices_loss, edge_length_loss, normal_loss
 import datetime
 from tqdm import tqdm
@@ -45,7 +45,6 @@ class Runner(object):
         self.args = args
         self.model = model
         self.mano = mano_model
-        self.renderer = Renderer(faces=mano_model.face)
 
     def train(self, dataloader, optimizer, scheduler, board, logger):
         args = self.args
@@ -95,15 +94,15 @@ class Runner(object):
             pred_3d_root = pred_3d_joints_from_mesh[:,self.mano.joints_name.index('Wrist'),:]
             pred_vertices = pred_vertices - pred_3d_root[:, None, :]
             pred_3d_joints_from_mesh = pred_3d_joints_from_mesh - pred_3d_root[:, None, :]
-            pred_2d_joints_from_mesh = orthographic_projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
+            pred_2d_joints_from_mesh = projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
             loss_3d_joints = keypoint_3d_loss(criterion_keypoints, pred_3d_joints_from_mesh, gt_3d_joints_with_tag, has_3d_joints)
             loss_vertices = vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_mesh)
             loss_2d_joints = keypoint_2d_loss(criterion_2d_keypoints, pred_2d_joints_from_mesh, gt_2d_joints, has_2d_joints)
             loss_edge = edge_length_loss(pred_vertices, gt_vertices, self.mano.face)
             loss_normal = normal_loss(pred_vertices, gt_vertices, self.mano.face)
-            loss = args.joint_2d_loss_weight*loss_2d_joints + \
-                   args.vertices_loss_weight*loss_vertices + \
-                   args.joint_3d_loss_weight*loss_3d_joints + \
+            loss = args.joint_2d_loss_weight * loss_2d_joints + \
+                   args.vertices_loss_weight * loss_vertices + \
+                   args.joint_3d_loss_weight * loss_3d_joints + \
                    args.edge_loss_weight * loss_edge + \
                    args.normal_loss_weight * loss_normal
             # add to tensorboard
@@ -171,6 +170,8 @@ class Runner(object):
                     pred_3d_joints_from_mesh_list = pred_3d_joints_from_mesh[j].tolist()
                     joint_output_save.append(pred_3d_joints_from_mesh_list)
         print('save results to pred.json')
+        res_path = op.join(self.args.output_dir, 'eval')
+        mkdir(res_path)
         output_json_file = op.join(self.args.work_dir, 'out', 'eval', 'pred.json')
         print('save results to ', output_json_file)
         with open(output_json_file, 'w') as f:
@@ -179,6 +180,7 @@ class Runner(object):
         return    
 
     def demo(self, img_list):
+        vis_tool = Visualizer()
         transform = transforms.Compose([           
                             transforms.Resize(224),
                             transforms.CenterCrop(224),
@@ -191,29 +193,30 @@ class Runner(object):
                             transforms.CenterCrop(224),
                             transforms.ToTensor()])
         self.model.eval()
-        for img_file in img_list:
-            img_file = op.join(self.args.work_dir, 'images', img_file)
-            img = Image.open(img_file)
-            img_tensor = transform(img)
-            img_visual = transform_visualize(img).numpy().transpose(1, 2, 0)
-            batch_img = img_tensor.unsqueeze(0).to(self.args.device)
-            out = self.model(batch_img)
-            pred_camera = out['pred_camera']
-            pred_vertices = out['pred_vertices']
-            pred_3d_joints_from_mesh = self.mano.get_3d_joints(pred_vertices)
-            pred_3d_pelvis = pred_3d_joints_from_mesh[:, self.mano.joints_name.index('Wrist'), :]
-            pred_vertices -= pred_3d_pelvis
-            pred_3d_joints_from_mesh -= pred_3d_pelvis
-            pred_2d_joints_from_mesh = orthographic_projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
-            # visualize result
-            skl_img = visual_skeleton(img_visual, pred_2d_joints_from_mesh[0])
-            # rend_img = visual_mesh(self.renderer, img_visual, pred_vertices[0], pred_camera[0])
-            # result_img = np.hstack([img_visual, skl_img, rend_img])[:,:,::-1] * 255
-            result_img = np.hstack([img_visual, skl_img, ])[:,:,::-1] * 255
-            img_save_path = op.join(self.args.output_dir, 'demo', op.basename(img_file))
-            cv2.imwrite(img_save_path, result_img)
-            save_mesh(img_save_path[:-4]+'.ply', pred_vertices[0].detach().cpu().numpy(), self.mano.face)
-            print('save to ' + img_save_path)
+        with torch.no_grad():
+            for img_file in img_list:
+                img_file = op.join(self.args.work_dir, 'images', img_file)
+                img = Image.open(img_file)
+                img_tensor = transform(img)
+                img_visual = transform_visualize(img).numpy().transpose(1, 2, 0)
+                batch_img = img_tensor.unsqueeze(0).to(self.args.device)
+                out = self.model(batch_img)
+                pred_camera = out['pred_camera']
+                pred_vertices = out['pred_vertices']
+                pred_3d_joints_from_mesh = self.mano.get_3d_joints(pred_vertices)
+                pred_3d_pelvis = pred_3d_joints_from_mesh[:, self.mano.joints_name.index('Wrist'), :]
+                pred_vertices -= pred_3d_pelvis
+                pred_3d_joints_from_mesh -= pred_3d_pelvis
+                pred_2d_joints_from_mesh = projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
+                # visualize result
+                skl_img = vis_tool.draw_skeleton(img_visual, pred_2d_joints_from_mesh[0])
+                rend_img = vis_tool.draw_mesh(img_visual, pred_vertices[0], self.mano.face, pred_camera[0])
+                result_img = np.hstack([img_visual, skl_img, rend_img])[:,:,::-1] * 255
+                mkdir(op.join(self.args.output_dir, 'demo'))
+                img_save_path = op.join(self.args.output_dir, 'demo', op.basename(img_file))
+                cv2.imwrite(img_save_path, result_img)
+                save_mesh(img_save_path[:-4]+'.ply', pred_vertices[0].detach().cpu().numpy(), self.mano.face)
+                print('save to ' + img_save_path)
 
 
 

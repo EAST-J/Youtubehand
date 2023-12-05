@@ -56,3 +56,53 @@ def orthographic_projection(X, camera):
     shape = X_trans.shape
     X_2d = (camera[:, :, 0] * X_trans.view(shape[0], -1)).view(shape)
     return X_2d
+
+def perspective_projection(points, rotation, translation,
+                           focal_length, camera_center):
+    """
+    This function computes the perspective projection of a set of points.
+    Input:
+        points (bs, N, 3): 3D points
+        rotation (bs, 3, 3): Camera rotation
+        translation (bs, 3): Camera translation
+        focal_length (bs,) or scalar: Focal length
+        camera_center (bs, 2): Camera center
+    """
+    batch_size = points.shape[0]
+    K = torch.zeros([batch_size, 3, 3], device=points.device)
+    K[:,0,0] = focal_length
+    K[:,1,1] = focal_length
+    K[:,2,2] = 1.
+    K[:,:-1, -1] = camera_center
+
+    # Transform points
+    points = torch.einsum('bij,bkj->bki', rotation, points)
+    points = points + translation.unsqueeze(1)
+
+    # Apply perspective distortion
+    projected_points = points / points[:,:,-1].unsqueeze(-1)
+
+    # Apply camera intrinsics
+    projected_points = torch.einsum('bij,bkj->bki', K, projected_points)
+
+    return projected_points[:, :, :-1]
+
+def projection(pred_joints, pred_camera, img_res=224.):
+    '''
+    pred_joints: bs * N * 3
+    pred_camera: bs * 3
+    pred_2d: bs * N * 2
+    '''
+    pred_cam_t = torch.stack([pred_camera[:, 1],
+                              pred_camera[:, 2],
+                              2 * 5000. / (img_res * pred_camera[:, 0] + 1e-9)], dim=-1)
+    batch_size = pred_joints.shape[0]
+    camera_center = torch.zeros(batch_size, 2)
+    pred_keypoints_2d = perspective_projection(pred_joints,
+                                               rotation=torch.eye(3).unsqueeze(0).expand(batch_size, -1, -1).to(pred_joints.device),
+                                               translation=pred_cam_t,
+                                               focal_length=5000.,
+                                               camera_center=camera_center)
+    # Normalize keypoints to [-1,1]
+    pred_keypoints_2d = pred_keypoints_2d / (img_res / 2.)
+    return pred_keypoints_2d

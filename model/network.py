@@ -1,40 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch_scatter import scatter_add
-from conv.spiralconv import Spiralconv
-from .resnet import resnet18, resnet50
-import numpy as np
-
-
-def Pool(x, trans, dim=1):
-    """
-    x:input feature
-    trans:sample matrix
-    dim:sample dim
-    return:sampled feature
-    """
-    trans = trans.to(x.device)
-    row, col = trans._indices()
-    value = trans._values().unsqueeze(-1)
-    out = torch.index_select(x, dim, col) * value
-    out = scatter_add(out, row, dim, dim_size=trans.size(0))
-    return out
-
-
-class SpiralDeblock(nn.Module):
-    # Decoder that include upsampling and GCN
-    def __init__(self, in_channels, out_channels, indices):
-        super().__init__()
-        self.conv = Spiralconv(in_channels=in_channels, out_channels=out_channels, indices=indices)
-
-    def forward(self, x, up_transform):
-        out = Pool(x, up_transform)
-        out = F.relu(self.conv(out))
-
-        return out
-
-
+from conv.spiralconv import Spiralconv, SpiralDeblock
+from model.resnet import resnet18, resnet50
+from model.hrnet.config import config as hrnet_config
+from model.hrnet.config import update_config as hrnet_update_config
+from model.hrnet.hrnet_cls_net import HighResolutionNet, get_cls_net
 
 class ResNetEncoder(nn.Module):
     def __init__(self, backbone):
@@ -61,8 +31,6 @@ class ResNetEncoder(nn.Module):
         x = torch.flatten(x, 1)
         return x
 
-
-
 class Network(nn.Module):  # Hand Reconstruction network
     def __init__(self, in_channels, out_channels, spiral_indices, up_transform, down_transform, backbone='resnet18'):
         super().__init__()
@@ -74,7 +42,10 @@ class Network(nn.Module):  # Hand Reconstruction network
         self.backbone, self.latent_size = self.get_backbone(backbone)
         self.num_vert = [u.size(0) for u in self.up_transform] + [self.up_transform[-1].size(1)]
         # encoder
-        self.en_layer = ResNetEncoder(self.backbone)
+        if isinstance(self.backbone, HighResolutionNet):
+            self.en_layer = self.backbone
+        else:
+            self.en_layer = ResNetEncoder(self.backbone)
         # decoder
         self.de_layers = nn.ModuleList()
         self.de_layers.append(
@@ -120,8 +91,14 @@ class Network(nn.Module):  # Hand Reconstruction network
         elif '18' in backbone:
             basenet = resnet18(pretrained=pretrained)
             latent_channel = 512
+        elif 'hrnet' in backbone:
+            hrnet_yaml = './model/hrnet/cls_hrnet_w64_sgd_lr5e-2_wd1e-4_bs32_x100.yaml'
+            hrnet_checkpoint = './model/hrnet/hrnetv2_w64_imagenet_pretrained.pth'
+            hrnet_update_config(hrnet_config, hrnet_yaml)
+            basenet = get_cls_net(hrnet_config, pretrained=hrnet_checkpoint)
+            latent_channel = 2048
         else:
-            raise Exception("Backbone Types Not supported, Please refer to resnet.py", backbone)
+            raise Exception("Backbone Types Not supported", backbone)
 
         return basenet, latent_channel
 

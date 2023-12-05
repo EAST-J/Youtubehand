@@ -6,6 +6,7 @@ class BaseOptions():
         self.initialized = False
 
     def initialize(self, parser):
+        parser.add_argument('--exp_name', type=str, default='hand-recon')
         parser.add_argument('--num_workers', type=int, default=4)
         parser.add_argument('--device_idx', type=int, nargs='+', default=0)
         # dataset hyperparameters
@@ -32,7 +33,8 @@ class BaseOptions():
         parser.add_argument('--split', type=str, default='train')
         parser.add_argument('--batch_size', type=int, default=64)
         parser.add_argument('--epochs', type=int, default=38)
-        parser.add_argument('--resume', type=str, default='')
+        parser.add_argument('--resume', default=False, action='store_true')
+        parser.add_argument('--checkpoint_path', type=str, default='')
         parser.add_argument('--joint_2d_loss_weight', type=float, default=0.1)
         parser.add_argument('--vertices_loss_weight', type=float, default=1.0)
         parser.add_argument('--joint_3d_loss_weight', type=float, default=1.0)
@@ -45,7 +47,7 @@ class BaseOptions():
                         help="Log every X steps.")
         # dir setting
         parser.add_argument('--output_dir', type=str, default='./out')
-        parser.add_argument('--mano_dir', type=str, default='/remote-home/jiangshijian/mesh/Re_Youtubehand/template')
+        parser.add_argument('--mano_dir', type=str, default='./template')
         parser.add_argument("--data_dir", default='./data', type=str, required=False, help="Directory with all datasets, each in one subfolder")
 
         self.initialized = True

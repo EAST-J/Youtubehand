@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch_scatter import scatter_add
 
 class Spiralconv(nn.Module):
     def __init__(self, in_channels, out_channels, indices, dim=1):
@@ -29,3 +30,29 @@ class Spiralconv(nn.Module):
         x = self.layer(x)
         return x
 
+def Pool(x, trans, dim=1):
+    """
+    x:input feature
+    trans:sample matrix
+    dim:sample dim
+    return:sampled feature
+    """
+    trans = trans.to(x.device)
+    row, col = trans._indices()
+    value = trans._values().unsqueeze(-1)
+    out = torch.index_select(x, dim, col) * value
+    out = scatter_add(out, row, dim, dim_size=trans.size(0))
+    return out
+
+
+class SpiralDeblock(nn.Module):
+    # Decoder that include upsampling and GCN
+    def __init__(self, in_channels, out_channels, indices):
+        super().__init__()
+        self.conv = Spiralconv(in_channels=in_channels, out_channels=out_channels, indices=indices)
+
+    def forward(self, x, up_transform):
+        out = Pool(x, up_transform)
+        out = F.relu(self.conv(out))
+
+        return out

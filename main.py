@@ -21,6 +21,7 @@ def main():
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args.device = torch.device(args.device)
     torch.cuda.set_device(args.device_idx)
+    args.output_dir = osp.join(args.output_dir, args.exp_name)
     mkdir(args.output_dir)
     logger = setup_logger("LOGINFO", args.output_dir, get_rank())
     set_seed(args.seed, get_rank())
@@ -34,7 +35,12 @@ def main():
     model = Network(args.in_channels, args.out_channels, spiral_indices_list, up_transform_list, down_transform_list, args.backbone)
     # resume from checkpoint
     if args.resume:
-        model_path = args.resume
+        if len(args.checkpoint_path) == 0:
+            checkpoints_list = os.listdir(osp.join(args.output_dir, 'checkpoints'))
+            checkpoints_list.sort(key=lambda x:int(x.split('-')[2])) # load the last epoch
+            model_path = osp.join(args.output_dir, 'checkpoints', checkpoints_list[-1], 'state_dict.bin')
+        else:
+            model_path = args.checkpoint_path
         checkpoint = torch.load(model_path, map_location='cpu')
         if checkpoint.get('model_state_dict', None) is not None:
             checkpoint = checkpoint['model_state_dict']
@@ -47,6 +53,7 @@ def main():
     runner = Runner(args, model, mano_model)
     #####
     if args.split == 'train':
+        logger.info('Model total parameter {}'.format(total_params))
         dataloader = make_hand_data_loader(args, args.train_yaml, args.distributed, is_train=True, scale_factor=args.img_scale_factor)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=0)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.decay_step, gamma=args.lr_decay)
