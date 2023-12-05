@@ -6,6 +6,8 @@
 
 ⚠Unofficial⚠ PyTorch implementation of [Weakly-Supervised Mesh-Convolutional Hand Reconstruction in the Wild](https://arxiv.org/abs/2004.01946), CVPR 2020
 
+![2154_img](https://raw.githubusercontent.com/EAST-J/pictures/main/img/2154_img.jpg)
+
 ### Install
 
 ---
@@ -44,23 +46,22 @@ ${REP_DIR}
 |...
 ```
 
-
-
 ### Trained Model Download
 
 ---
 
-- Download the trained model from [GoogleDrive](https://drive.google.com/drive/folders/1vw1Rfjdfc4UxWjRR3eFbx2lMjdseN8mh?usp=sharing) (TO be updated)
+- The pre-trained HRNet can be downloaded according to [METRO](https://github.com/microsoft/MeshTransformer/blob/main/docs/DOWNLOAD.md)
 
-- Here I report the re-produced results on FreiHAND
+- Download the trained model from [GoogleDrive](https://drive.google.com/drive/folders/1vw1Rfjdfc4UxWjRR3eFbx2lMjdseN8mh?usp=sharing) (To be updated)
 
-| Methods    | Backbone | PA-MPJPE | PA-MPVPE |
-| ---------- | -------- | -------- | -------- |
-| Origin     | ResNet50 | 8.4      | 8.6      |
-| Reproduced | ResNet18 | 8.6      | 8.8      |
-| Reproduced | ResNet50 | 7.7      | 7.9      |
+- Here I report my re-produced results on FreiHAND
 
-
+| Methods    | Backbone  | PA-MPJPE | PA-MPVPE | #Params |
+| ---------- | --------- | -------- | -------- | ------- |
+| Origin     | ResNet50  | 8.4      | 8.6      | -       |
+| Reproduced | ResNet18  | 8.6      | 8.7      | 36M     |
+| Reproduced | ResNet50  | 7.7      | 7.7      | 419M    |
+| Reproduced | HRNet-W64 | 7.2      | 7.4      | 519M    |
 
 ### Demo
 
@@ -70,7 +71,7 @@ ${REP_DIR}
 - Run
 
 ```
-python main.py --split demo --resume $path to trained model$
+python main.py --split demo --resume --exp_name $exp_name under the out folder e.g. global-resnet18$
 ```
 
 ### Train
@@ -82,9 +83,7 @@ python main.py --split demo --resume $path to trained model$
 
 ```
 # resnet18
-python main.py --split train --batch_size 64 --epochs 38 --decay_step 30 --backbone resnet18 --out_channels 64 128 256 512
-# resnet50
-python main.py --split train --batch_size 64 --epochs 38 --decay_step 30 --backbone resnet50 --out_channels 256 512 1024 2048
+python main.py --split train --batch_size 64 --epochs 38 --decay_step 30 --backbone resnet18 --out_channels 64 128 256 512 --exp_name global-resnet18
 ```
 
 ### Evaluation
@@ -94,7 +93,7 @@ python main.py --split train --batch_size 64 --epochs 38 --decay_step 30 --backb
 - Run
 
 ```
-python main.py --split eval --resume $path to trained model$
+python main.py --split eval --exp_name $exp_name under the out folder e.g. global-resnet18$
 ```
 
 ### Acknowledgement
