@@ -52,7 +52,7 @@ ${REP_DIR}
 
 - The pre-trained HRNet can be downloaded according to [METRO](https://github.com/microsoft/MeshTransformer/blob/main/docs/DOWNLOAD.md)
 
-- Download the trained model from [GoogleDrive](https://drive.google.com/drive/folders/1vw1Rfjdfc4UxWjRR3eFbx2lMjdseN8mh?usp=sharing) (To be updated)
+- Download the trained model from [GoogleDrive](https://drive.google.com/drive/folders/1oE6Dpjc2JljyTMjYtzViYtK8EAjpsEx-?usp=sharing)
 
 - Here I report my re-produced results on FreiHAND
 
